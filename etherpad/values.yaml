@@ -44,6 +44,8 @@ podAnnotations: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
+podLabels: {}
+
 securityContext: {}
   # capabilities:
   #   drop:
