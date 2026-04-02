@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose -f docker-compose.yml convert
+    kompose.version: 1.38.0 (HEAD)
+  labels:
+    io.kompose.service: app
+  name: app
+  namespace: etherpad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: app
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose -f docker-compose.yml convert
+        kompose.version: 1.38.0 (HEAD)
+      labels:
+        io.kompose.service: app
+        mariadb/role: client
+      namespace: etherpad
+    spec:
+      securityContext:
+        fsGroup: 5001
+      serviceAccountName: app
+      containers:
+        - env:
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: etherpad
+                  key: admin
+            - name: DB_CHARSET
+              value: utf8mb4
+            - name: DB_HOST
+              value: galera-mariadb-galera.mariadb
+            - name: DB_NAME
+              value: etherpad
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: etherpad
+                  key: mysql
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_TYPE
+              value: mysql
+            - name: DB_USER
+              value: etherpad
+            - name: DEFAULT_PAD_TEXT
+              value: " "
+            - name: DISABLE_IP_LOGGING
+              value: "false"
+            - name: NODE_ENV
+              value: production
+            - name: SOFFICE
+              value: "null"
+            - name: TRUST_PROXY
+              value: "true"
+            - name: TZ
+              value: "Europe/Zurich"
+          image: etherpad/etherpad:latest
+          name: app
+          ports:
+            - containerPort: 9001
+              protocol: TCP
+          securityContext:
+            runAsGroup: 0
+            runAsUser: 5001
+          stdin: true
+          tty: true
+          volumeMounts:
+            - mountPath: /opt/etherpad-lite/src/plugin_packages
+              name: plugins
+            - mountPath: /opt/etherpad-lite/var
+              name: etherpad-var
+      restartPolicy: Always
+      volumes:
+        - name: plugins
+          persistentVolumeClaim:
+            claimName: plugins
+        - name: etherpad-var
+          persistentVolumeClaim:
+            claimName: etherpad-var
